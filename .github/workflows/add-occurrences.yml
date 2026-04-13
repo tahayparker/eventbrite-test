@@ -1,0 +1,35 @@
+name: Add Weekly Occurrences
+
+on:
+  schedule:
+    # Monday 12pm Sydney → Tue slots
+    - cron: '0 1 * * 1'    # AEDT (Oct–Apr)
+    - cron: '0 2 * * 1'    # AEST (Apr–Oct)
+    # Wednesday 12pm Sydney → Thu slots
+    - cron: '0 1 * * 3'    # AEDT
+    - cron: '0 2 * * 3'    # AEST
+    # Thursday 12pm Sydney → Fri slots
+    - cron: '0 1 * * 4'    # AEDT
+    - cron: '0 2 * * 4'    # AEST
+  workflow_dispatch:
+
+jobs:
+  add-slots:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pytz
+
+      - name: Run script
+        env:
+          EVENTBRITE_TOKEN: ${{ secrets.EVENTBRITE_TOKEN }}
+          SERIES_ID: ${{ secrets.SERIES_ID }}
+        run: python add_occurrences.py
