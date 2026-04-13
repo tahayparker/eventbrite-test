@@ -5,17 +5,17 @@ import pytz
 
 TOKEN = os.environ["EVENTBRITE_TOKEN"]
 SERIES_ID = os.environ["SERIES_ID"]
-EVENT_NAME = "TP Test"
 SYDNEY_TZ = pytz.timezone("Australia/Sydney")
 
+# Day mapping (0=Mon, 2=Wed, 3=Thu)
 DAY_SCHEDULE = {
-    0: {"target_weekday": 1, "slots": [(10,30),(11,0),(11,30)]},  # Mon → Tue
-    2: {"target_weekday": 3, "slots": [(14,0),(14,30),(15,0)]},   # Wed → Thu
-    3: {"target_weekday": 4, "slots": [(10,30),(11,0),(11,30)]},  # Thu → Fri
+    0: {"target_weekday": 1, "slots": [(10,30),(11,0),(11,30)]},  # Run Mon -> Create Tue
+    2: {"target_weekday": 3, "slots": [(14,0),(14,30),(15,0)]},   # Run Wed -> Create Thu
+    3: {"target_weekday": 4, "slots": [(10,30),(11,0),(11,30)]},  # Run Thu -> Create Fri
 }
 
 def get_existing_utc_starts():
-    """Fetch all existing occurrences and return set of their UTC start strings."""
+    """Fetch all existing occurrences to prevent duplicates."""
     existing = set()
     url = f"https://www.eventbriteapi.com/v3/series/{SERIES_ID}/events/"
     while url:
@@ -26,28 +26,31 @@ def get_existing_utc_starts():
         data = resp.json()
         for event in data.get("events", []):
             existing.add(event["start"]["utc"])
-        # paginate
+        
         continuation = data.get("pagination", {}).get("continuation")
-        if continuation and data.get("pagination", {}).get("has_more_items"):
-            url = f"https://www.eventbriteapi.com/v3/series/{SERIES_ID}/events/?continuation={continuation}"
-        else:
-            url = None
-    print(f"Found {len(existing)} existing occurrences.")
+        url = f"{url}?continuation={continuation}" if continuation and data.get("pagination", {}).get("has_more_items") else None
     return existing
 
-def make_slots(base_date, hour_minute_pairs, existing_utc_starts):
+def make_slots(target_date, hour_minute_pairs, existing_utc_starts):
     slots = []
     for hour, minute in hour_minute_pairs:
-        start = base_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        end = start + timedelta(minutes=30)
-        start_utc = start.astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Properly localize the time to Sydney
+        local_dt = SYDNEY_TZ.localize(datetime(
+            target_date.year, target_date.month, target_date.day, hour, minute
+        ))
+        
+        start_utc = local_dt.astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        
         if start_utc in existing_utc_starts:
-            print(f"⏭️  Skipping {start_utc} — already exists.")
+            print(f"⏭️ Skipping {start_utc} — already exists.")
             continue
+
+        end_dt = local_dt + timedelta(minutes=30)
+        end_utc = end_dt.astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
         slots.append({
             "start": {"timezone": "Australia/Sydney", "utc": start_utc},
-            "end":   {"timezone": "Australia/Sydney", "utc": end.astimezone(pytz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
-            "capacity": 50
+            "end":   {"timezone": "Australia/Sydney", "utc": end_utc}
         })
     return slots
 
@@ -62,29 +65,22 @@ def main():
     schedule = DAY_SCHEDULE[today]
     days_ahead = (schedule["target_weekday"] - today + 7) % 7
     target_date = now_sydney + timedelta(days=days_ahead)
-    print(f"Target day: {target_date.strftime('%A %d %B %Y')}")
-
+    
     existing = get_existing_utc_starts()
     slots = make_slots(target_date, schedule["slots"], existing)
 
     if not slots:
-        print("✅ All slots already exist — nothing to create.")
+        print("✅ All slots already exist.")
         return
 
-    print(f"Creating {len(slots)} new slot(s)...")
+    print(f"Adding {len(slots)} occurrences to {target_date.date()}...")
 
-    payload = {
-        "event": {
-            "name": {"html": EVENT_NAME},
-            "start": slots[0]["start"],
-            "end":   slots[-1]["end"],
-            "currency": "AUD"
-        },
-        "series_dates": {"create": slots}
-    }
+    # FIX: Use the /dates/ sub-resource and simple payload structure
+    url = f"https://www.eventbriteapi.com/v3/series/{SERIES_ID}/dates/"
+    payload = {"series_dates": slots}
 
     response = requests.post(
-        f"https://www.eventbriteapi.com/v3/series/{SERIES_ID}/",
+        url,
         headers={
             "Authorization": f"Bearer {TOKEN}",
             "Content-Type": "application/json"
@@ -93,10 +89,9 @@ def main():
     )
 
     if response.ok:
-        print("✅ Success:", response.json())
+        print("✅ Success: Occurrences added.")
     else:
-        print("❌ Failed:", response.status_code, response.text)
-        exit(1)
+        print(f"❌ Failed: {response.status_code} - {response.text}")
 
 if __name__ == "__main__":
     main()
