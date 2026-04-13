@@ -83,7 +83,7 @@ def main():
         "series_dates": {"create": slots}
     }
 
-    response = requests.patch(
+    response = requests.post(
         f"https://www.eventbriteapi.com/v3/series/{SERIES_ID}/",
         headers={
             "Authorization": f"Bearer {TOKEN}",
