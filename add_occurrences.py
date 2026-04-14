@@ -15,8 +15,22 @@ logger = logging.getLogger(__name__)
 
 # Auth token and series ID sourced from environment variables
 TOKEN = os.environ["EVENTBRITE_TOKEN"]
-SERIES_ID = os.environ["SERIES_ID"]
+SERIES_ID_RAW = os.environ["SERIES_ID"]
 SYDNEY_TZ = pytz.timezone("Australia/Sydney")
+
+
+def validate_series_id(series_id: str) -> str:
+    """
+    Validate Eventbrite series/event ID used in URL path construction.
+    Event IDs are expected to be numeric; reject anything else to prevent
+    path/query manipulation through untrusted input.
+    """
+    if not series_id or not series_id.isdigit():
+        raise ValueError("SERIES_ID must be a non-empty numeric string")
+    return series_id
+
+
+SERIES_ID = validate_series_id(SERIES_ID_RAW)
 
 # Maps the current weekday (when the script runs) to the target weekday and time slots.
 # Keys are weekday indices (0=Mon, 2=Wed, 3=Thu) representing when the GitHub Action triggers.
