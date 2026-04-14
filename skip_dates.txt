@@ -1,0 +1,4 @@
+# Dates to skip creating occurrences for (dd-mm-yyyy, one per line)
+# Example:
+# 25-12-2026
+# 01-01-2027
