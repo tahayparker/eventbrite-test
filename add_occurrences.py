@@ -209,8 +209,9 @@ def main():
         if response.ok:
             logger.info("  Created successfully (HTTP %d)", response.status_code)
         else:
+            safe_response_text = response.text.replace("\r", "\\r").replace("\n", "\\n")
             logger.error(
-                "  Request failed: HTTP %d - %s", response.status_code, response.text
+                "  Request failed: HTTP %d - %s", response.status_code, safe_response_text
             )
 
     logger.info("Finished processing all scheduled occurrences")
