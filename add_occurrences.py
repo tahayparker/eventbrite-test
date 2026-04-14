@@ -32,6 +32,12 @@ def validate_series_id(series_id: str) -> str:
 
 SERIES_ID = validate_series_id(SERIES_ID_RAW)
 
+
+def sanitize_for_log(value) -> str:
+    """Return a log-safe string by removing CR/LF to prevent log injection."""
+    return str(value).replace("\r", "").replace("\n", "")
+
+
 # Maps the current weekday (when the script runs) to the target weekday and time slots.
 # Keys are weekday indices (0=Mon, 2=Wed, 3=Thu) representing when the GitHub Action triggers.
 # Each entry defines which day's slots to create and the (hour, minute) pairs for each occurrence.
@@ -89,7 +95,7 @@ def get_existing_utc_starts():
     page = 1
 
     while url:
-        logger.debug("Fetching existing events (page %d): %s", page, url)
+        logger.debug("Fetching existing events (page %d): %s", page, sanitize_for_log(url))
         resp = requests.get(url, headers={"Authorization": f"Bearer {TOKEN}"})
 
         if not resp.ok:
