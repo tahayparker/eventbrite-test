@@ -93,10 +93,11 @@ def get_existing_utc_starts():
         resp = requests.get(url, headers={"Authorization": f"Bearer {TOKEN}"})
 
         if not resp.ok:
+            safe_resp_text = resp.text.replace("\r", "").replace("\n", "")
             logger.error(
                 "Failed to fetch existing events: HTTP %d - %s",
                 resp.status_code,
-                resp.text,
+                safe_resp_text,
             )
             break
 
