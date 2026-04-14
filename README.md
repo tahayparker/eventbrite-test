@@ -171,7 +171,7 @@ cd eventbrite-test
 ### 2. Install dependencies
 
 ```bash
-pip install requests pytz python-dotenv
+pip install -r requirements.txt
 ```
 
 > `python-dotenv` is only needed for local/test runs. The GitHub Action installs `requests` and `pytz` directly.
