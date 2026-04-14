@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("EVENTBRITE_TOKEN", "")
-SERIES_ID = os.environ.get("SERIES_ID", "")
+SERIES_ID = _validated_series_id(os.environ.get("SERIES_ID", ""))
 SYDNEY_TZ = pytz.timezone("Australia/Sydney")
 
 
