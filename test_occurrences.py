@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import logging
+import re
 import requests
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -29,6 +30,13 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("EVENTBRITE_TOKEN", "")
 SERIES_ID = os.environ.get("SERIES_ID", "")
 SYDNEY_TZ = pytz.timezone("Australia/Sydney")
+
+
+def _validated_series_id(raw_series_id: str) -> str:
+    series_id = (raw_series_id or "").strip()
+    if not series_id or not re.fullmatch(r"\d+", series_id):
+        raise ValueError("SERIES_ID must be a non-empty numeric Eventbrite event ID.")
+    return series_id
 
 # Default to dry-run unless --live is explicitly passed
 DRY_RUN = "--live" not in sys.argv
@@ -234,7 +242,8 @@ def main():
         return
 
     # Submit each schedule to the Eventbrite API
-    url = f"https://www.eventbriteapi.com/v3/events/{SERIES_ID}/schedules/"
+    validated_series_id = _validated_series_id(SERIES_ID)
+    url = f"https://www.eventbriteapi.com/v3/events/{validated_series_id}/schedules/"
     headers = {
         "Authorization": f"Bearer {TOKEN}",
         "Content-Type": "application/json",
