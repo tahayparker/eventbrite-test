@@ -337,3 +337,7 @@ logging.basicConfig(level=logging.DEBUG, ...)
 | Duplicate occurrences | Shouldn't happen - the script checks existing events | Check the API response; the dedup logic relies on matching UTC start times |
 
 ---
+
+## LICENSE
+
+[LICENSE](LICENSE)
